@@ -30,15 +30,28 @@ const putJobFailure = (job_id, context, message) => {
   codepipeline.putJobFailureResult(params, _ => context.fail(message))
 }
 
-const broadcastPatchNotes = input_artifacts => {
-    console.log(input_artifacts)
-    return Promise.resolve()
+const broadcastPatchNotes = input_artifact => {
+  return new Promise((resolve, reject) => {
+    try {
+      console.log(input_artifact)
+      console.log(input_artifact.location.s3Location)
+      const client = new Discord.Client()
+      client.on('ready', _ => {
+        for (let id of PATCH_NOTES_CHANNELS)
+          client.channels.get(id)
+        resolve()
+      })
+    }
+    catch(e) {
+      reject(e)
+    }
+  })
 }
 
 exports.handler = async (event, context) => {
-    const job_id = event['CodePipeline.job'].id
+  const job_id = event['CodePipeline.job'].id
     
-    broadcastPatchNotes(event['CodePipeline.job'].data.inputArtifacts)
-    .then(_ => putJobSuccess(job_id, context))
-    .catch(e => putJobFailure(job_id, context, e))
+  broadcastPatchNotes(event['CodePipeline.job'].data.inputArtifacts[0])
+  .then(_ => putJobSuccess(job_id, context))
+  .catch(e => putJobFailure(job_id, context, e))
 }
